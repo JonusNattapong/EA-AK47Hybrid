@@ -1,0 +1,40 @@
+# Compiled MQL5 executables
+*.ex5
+
+# Log files
+*.log
+
+# Temporary files
+nul
+*.tmp
+*.temp
+
+# Debug and Release directories
+Debug/
+Release/
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+
+# MetaTrader specific
+*.hst
+*.fxt
+*.dat
+
+# Node modules if any
+node_modules/
+
+# Python cache if any
+__pycache__/
+*.pyc
