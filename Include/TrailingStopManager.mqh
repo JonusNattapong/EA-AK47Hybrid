@@ -1,6 +1,6 @@
 //+------------------------------------------------------------------+
 //|                                           TrailingStopManager.mqh |
-//|                        Copyright 2023, MetaQuotes Software Corp. |
+|                        Copyright 2025, zombitx64 |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2023, MetaQuotes Software Corp."

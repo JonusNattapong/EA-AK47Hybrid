@@ -394,7 +394,24 @@ For issues, questions, or suggestions:
 
 ## License
 
-Copyright 2023, MetaQuotes Software Corp.
+Copyright (c) 2025 zombitx64
+
+All rights reserved.
+
+This software (EA-AK47Hybrid Expert Advisor) is the intellectual property of zombitx64.
+
+**PERMISSION IS HEREBY DENIED to:**
+- Modify, adapt, alter, or create derivative works of this software
+- Sell, distribute, sublicense, or commercially exploit this software in any form
+- Use this software for any commercial purposes without explicit written permission from zombitx64
+
+This software is provided "AS IS" for personal, non-commercial use only. The author (zombitx64) assumes no responsibility for any damages or losses resulting from the use of this software.
+
+For inquiries or permissions, please contact the author.
+
+By using this software, you agree to these terms.
+
+See the [LICENSE](LICENSE) file for full license details.
 
 ---
 
