@@ -1,0 +1,126 @@
+[Inputs]
+; Balanced preset — moderate risk / reward configuration
+; Recommended: test in Strategy Tester with real tick data and run on demo before live
+
+; --- Trade settings ---
+LotSize=0.10
+UseFixedLot=true
+RiskPercent=2.0
+
+; --- Martingale settings ---
+UseMartingale=false
+MartingaleMultiplier=1.50
+MaxMartingaleLevels=0
+
+; --- Stop Loss & Take Profit (points) ---
+StopLoss=80
+TakeProfit=400
+
+; --- RSI settings ---
+RSIPeriod=14
+RSIOverbought=70
+RSIOversold=30
+
+; --- EMA Trend Filter ---
+UseTrendFilter=true
+EMAPeriod=50
+
+; --- ATR Volatility Filter ---
+UseATRFilter=true
+MinATR=0.20
+ATRPeriodFilter=14
+
+; --- MACD Momentum Filter ---
+UseMACDFilter=true
+MACDFast=12
+MACDSlow=26
+MACDSignal=9
+
+; --- Stochastic Oscillator Filter ---
+UseStochFilter=false
+StochK=5
+StochD=3
+StochSlowing=3
+StochOverbought=80
+StochOversold=20
+
+; --- Expert Advisor settings ---
+MagicNumber=24680
+Slippage=20
+
+; --- Trailing Stop settings ---
+UseTrailingStop=true
+TrailingMode=TRAILING_MODE_ATR
+TrailingDistance=1.5
+TrailingStep=15.0
+ATRPeriod=21
+ATRMultiplier=1.5
+
+; --- Breakeven settings ---
+UseBreakeven=true
+BreakevenTrigger=120.0
+BreakevenOffset=8.0
+PartialBreakeven=true
+
+; --- Time Filter settings ---
+UseTimeFilter=true
+TradingStartHour=1
+TradingEndHour=22
+AllowWeekendTrading=false
+InvertTimeFilter=false
+
+; --- Advanced position management ---
+UsePositionManager=true
+UsePartialClose=true
+PartialCloseTrigger=150.0
+PartialClosePercent=0.35
+UseMultipleTP=true
+TP1_Profit=150.0
+TP1_Volume=0.35
+TP1_Enabled=true
+TP2_Profit=300.0
+TP2_Volume=0.35
+TP2_Enabled=true
+TP3_Profit=600.0
+TP3_Volume=0.30
+TP3_Enabled=false
+
+; --- News filter ---
+UseNewsFilter=true
+NewsAvoidanceMinutes=30
+
+; --- Display settings ---
+UseDisplay=true
+DisplayTextColor=clrWhite
+DisplayFontSize=9
+DisplayFontName=Arial
+
+; --- MA Crossover settings ---
+UseMACrossover=true
+SMAFastPeriod=10
+SMASlowPeriod=30
+
+; --- Breakout settings (Bollinger Bands) ---
+UseBreakout=true
+BBPeriod=20
+BBDeviation=2.0
+
+; --- Momentum settings ---
+UseMomentumFilter=true
+MomentumPeriod=14
+
+; --- Trend following (ADX) settings ---
+UseADXFilter=true
+ADXPeriod=14
+ADXThreshold=20
+
+; --- Notes ---
+; Balanced preset rationale:
+; - Moderate base lot with fixed sizing and per-trade risk ~2% of account when dynamic sizing is enabled.
+; - No martingale to avoid escalating drawdowns; instead rely on trend + volatility filters.
+; - EMA (50) trend filter + MACD + ATR + optional MA crossover and Bollinger breakout increase signal quality.
+; - Wider SL (80 points) with multiple TP levels to let trends develop and capture larger moves.
+; - Trailing stop (ATR-based) and breakeven protect profits once trades move in favor.
+; - Partial close at TP1 to lock profits and reduce exposure on extended moves.
+; - News and time filters enabled to avoid volatile, low-liquidity periods.
+; - Test extensively across multiple symbols/timeframes and adjust LotSize / RiskPercent to match your account and comfort with drawdowns.

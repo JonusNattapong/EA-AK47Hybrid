@@ -28,6 +28,7 @@ public:
                     ~CTradeManager();
 
    void              Init(string symbol, ulong magic_number, double lot_size, int stop_loss, int take_profit, int deviation = 10);
+   void              SetLot(double lot_size);
 
    bool              OpenBuy(double price);
    bool              OpenSell(double price);
@@ -79,6 +80,14 @@ void CTradeManager::Init(string symbol, ulong magic_number, double lot_size, int
    m_trade.SetTypeFilling(ORDER_FILLING_FOK);
 
    Print("Trade Manager initialized for ", m_symbol, " with Magic Number: ", m_magic_number);
+  }
+
+//+------------------------------------------------------------------+
+//| Set lot size                                                     |
+//+------------------------------------------------------------------+
+void CTradeManager::SetLot(double lot_size)
+  {
+   m_lot_size = lot_size;
   }
 
 //+------------------------------------------------------------------+

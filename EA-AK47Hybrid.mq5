@@ -24,22 +24,46 @@
 
 //--- Input parameters
 input group "=== Trade Settings ==="
-input double   LotSize = 0.01;           // Lot size
+input double   LotSize = 1.0;           // Lot size
 input bool     UseFixedLot = true;       // Use fixed lot size
 input double   RiskPercent = 1.0;        // Risk percentage per trade
 
+input group "=== Martingale Settings ==="
+input bool     UseMartingale = true;     // Enable Martingale lot sizing after losses
+input double   MartingaleMultiplier = 2.0; // Lot multiplier after each loss
+input int      MaxMartingaleLevels = 5;  // Maximum consecutive losses before reset
+
 input group "=== Stop Loss & Take Profit ==="
-input int      StopLoss = 120;           // Stop Loss in points (increased for gold volatility)
-input int      TakeProfit = 250;         // Take Profit in points (increased for gold volatility)
+input int      StopLoss = 20;           // Stop Loss in points (extreme risk)
+input int      TakeProfit = 1000;         // Take Profit in points (extreme reward)
 
 input group "=== RSI Settings ==="
 input int      RSIPeriod = 21;           // RSI period (increased for smoother signals in gold)
-input int      RSIOverbought = 75;       // RSI overbought level (adjusted for gold trends)
-input int      RSIOversold = 25;         // RSI oversold level (adjusted for gold trends)
+input int      RSIOverbought = 80;       // RSI overbought level (relaxed for more signals)
+input int      RSIOversold = 20;         // RSI oversold level (relaxed for more signals)
 
 input group "=== EMA Trend Filter ==="
-input bool     UseTrendFilter = true;    // Use EMA trend filter
-input int      EMAPeriod = 100;          // EMA period for trend filter (longer for gold trends)
+input bool     UseTrendFilter = false;    // Use EMA trend filter
+input int      EMAPeriod = 50;          // EMA period for trend filter (shortened for more signals)
+
+input group "=== ATR Volatility Filter ==="
+input bool     UseATRFilter = false;      // Use ATR volatility filter to avoid low volatility trades
+input double   MinATR = 0.5;             // Minimum ATR value (in points) to allow trading
+input int      ATRPeriodFilter = 14;     // ATR period for volatility filter
+
+input group "=== MACD Momentum Filter ==="
+input bool     UseMACDFilter = false;      // Use MACD for momentum confirmation
+input int      MACDFast = 12;             // MACD fast period
+input int      MACDSlow = 26;             // MACD slow period
+input int      MACDSignal = 9;            // MACD signal period
+
+input group "=== Stochastic Oscillator Filter ==="
+input bool     UseStochFilter = false;     // Use Stochastic for overbought/oversold confirmation
+input int      StochK = 5;                // Stochastic %K period
+input int      StochD = 3;                // Stochastic %D period
+input int      StochSlowing = 3;          // Stochastic slowing period
+input int      StochOverbought = 80;      // Stochastic overbought level
+input int      StochOversold = 20;        // Stochastic oversold level
 
 input group "=== Expert Advisor Settings ==="
 input int      MagicNumber = 12345;      // Magic number for orders
@@ -60,7 +84,7 @@ input double   BreakevenOffset = 5.0;    // Offset from entry price (points, inc
 input bool     PartialBreakeven = true;  // Move SL to breakeven + offset (enabled for gold)
 
 input group "=== Time Filter Settings ==="
-input bool     UseTimeFilter = true;     // Enable time-based trading restrictions
+input bool     UseTimeFilter = false;    // Enable time-based trading restrictions
 input int      TradingStartHour = 2;     // Start trading hour (0-23, early for gold session)
 input int      TradingEndHour = 20;      // End trading hour (0-23, extended for gold)
 input bool     AllowWeekendTrading = false; // Allow trading on weekends
@@ -83,8 +107,34 @@ input double   TP3_Volume = 0.3;          // TP3 volume percentage
 input bool     TP3_Enabled = false;       // Enable TP3
 
 input group "=== News Filter Settings ==="
-input bool     UseNewsFilter = true;      // Enable news event filtering
+input bool     UseNewsFilter = false;     // Enable news event filtering
 input int      NewsAvoidanceMinutes = 30; // Minutes to avoid before/after news
+
+input group "=== AI Settings ==="
+input bool     UseAISignals = false;           // Enable simple AI-based adjustments
+input double   AIAdjustThreshold = 10.0;       // Minimum absolute last-trade profit to trigger AI adjustment (account currency)
+input double   AIAdjustAmount = 2.0;           // How much to shift RSI thresholds when AI triggers (points)
+input double   AILearningRate = 0.1;           // Placeholder learning rate for future expansion
+input string   AIModelEndpoint = "";           // (Optional) external AI model endpoint (not used yet)
+
+input group "=== MA Crossover Settings ==="
+input bool     UseMACrossover = true;     // Enable MA crossover signals
+input int      SMAFastPeriod = 10;        // Fast SMA period
+input int      SMASlowPeriod = 20;        // Slow SMA period
+
+input group "=== Breakout Settings ==="
+input bool     UseBreakout = true;        // Enable breakout signals
+input int      BBPeriod = 20;             // Bollinger Bands period
+input double   BBDeviation = 2.0;         // Bollinger Bands deviation
+
+input group "=== Momentum Settings ==="
+input bool     UseMomentumFilter = true;  // Enable momentum filter
+input int      MomentumPeriod = 14;       // Momentum period
+
+input group "=== Trend Following Settings ==="
+input bool     UseADXFilter = true;       // Enable ADX trend filter
+input int      ADXPeriod = 14;            // ADX period
+input int      ADXThreshold = 25;         // ADX threshold for trending
 
 input group "=== Display Settings ==="
 input bool     UseDisplay = true;         // Enable chart overlay display
@@ -108,6 +158,8 @@ CDisplayManager       *g_display_manager;
 //--- Global variables
 datetime           g_last_bar_time = 0;
 bool               g_initialized = false;
+static int         g_consecutive_losses = 0;
+static double      g_current_lot = 0.0;
 
 
 
@@ -127,10 +179,9 @@ int OnInit()
      }
 
 //--- Initialize indicator manager
-   if(!g_indicator_manager.Init(_Symbol, _Period, RSIPeriod, EMAPeriod))
+   if(!g_indicator_manager.Init(_Symbol, _Period, RSIPeriod, EMAPeriod, ATRPeriodFilter, MACDFast, MACDSlow, MACDSignal, SMAFastPeriod, SMASlowPeriod, BBPeriod, BBDeviation, ADXPeriod, MomentumPeriod))
      {
       Print("Error: Failed to initialize Indicator Manager");
-      delete g_indicator_manager;
       return(INIT_FAILED);
      }
 
@@ -145,6 +196,7 @@ int OnInit()
 
 //--- Initialize trade manager
    g_trade_manager.Init(_Symbol, MagicNumber, LotSize, StopLoss, TakeProfit, Slippage);
+   g_current_lot = LotSize;
 
 //--- Create signal manager
    g_signal_manager = new CSignalManager();
@@ -157,7 +209,7 @@ int OnInit()
      }
 
 //--- Initialize signal manager
-   g_signal_manager.Init(g_indicator_manager, RSIOversold, RSIOverbought, UseTrendFilter, _Symbol);
+   g_signal_manager.Init(g_indicator_manager, RSIOversold, RSIOverbought, UseTrendFilter, UseATRFilter, MinATR, UseMACDFilter, UseStochFilter, StochOverbought, StochOversold, _Symbol, UseMACrossover, UseBreakout, UseMomentumFilter, UseADXFilter, ADXThreshold);
 
 //--- Create risk manager
    g_risk_manager = new CRiskManager();
@@ -329,8 +381,12 @@ int OnInit()
    Print("Timeframe: ", EnumToString(_Period));
    Print("RSI Period: ", RSIPeriod, " | Oversold: ", RSIOversold, " | Overbought: ", RSIOverbought);
    Print("EMA Period: ", EMAPeriod, " | Trend Filter: ", (UseTrendFilter ? "Enabled" : "Disabled"));
+   Print("ATR Filter: ", (UseATRFilter ? "Enabled" : "Disabled"), " | Min ATR: ", MinATR, " | ATR Period: ", ATRPeriodFilter);
+   Print("MACD Filter: ", (UseMACDFilter ? "Enabled" : "Disabled"), " | Fast: ", MACDFast, " | Slow: ", MACDSlow, " | Signal: ", MACDSignal);
+   Print("Stoch Filter: ", (UseStochFilter ? "Enabled" : "Disabled"), " | K: ", StochK, " | D: ", StochD, " | Slowing: ", StochSlowing, " | OB: ", StochOverbought, " | OS: ", StochOversold);
    Print("Stop Loss: ", StopLoss, " | Take Profit: ", TakeProfit);
    Print("Lot Size: ", LotSize, " | Use Fixed Lot: ", (UseFixedLot ? "Yes" : "No"));
+   Print("Martingale: ", (UseMartingale ? "Enabled" : "Disabled"), " | Multiplier: ", MartingaleMultiplier, " | Max Levels: ", MaxMartingaleLevels);
    Print("Magic Number: ", MagicNumber);
    Print("Trailing Stop: ", (UseTrailingStop ? "Enabled" : "Disabled"));
    Print("Breakeven: ", (UseBreakeven ? "Enabled" : "Disabled"));
@@ -426,25 +482,33 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
   {
+   Print("OnTick called at ", TimeToString(TimeCurrent()));
+
 //--- Check if initialized
    if(!g_initialized)
+     {
+      Print("EA not initialized");
       return;
+     }
 
 //--- Check if we have enough bars
    if(Bars(_Symbol, _Period) < 100)
+     {
+      Print("Not enough bars: ", Bars(_Symbol, _Period));
       return;
+     }
 
 //--- Check time filter first
    if(g_time_filter_manager.IsEnabled() && !g_time_filter_manager.CanTrade())
      {
-      // Print("Trading not allowed at current time"); // Uncomment for debugging
+      Print("Trading not allowed at current time");
       return;
      }
 
 //--- Check news filter
    if(g_news_filter_manager.IsEnabled() && !g_news_filter_manager.CanTrade())
      {
-      // Print("Trading not allowed during news events"); // Uncomment for debugging
+      Print("Trading not allowed during news events");
       return;
      }
 
@@ -468,12 +532,110 @@ void OnTick()
 //--- Update indicators
    if(!g_indicator_manager.Update())
      {
-      // Print("Error updating indicators"); // Uncomment for debugging
+      Print("Error updating indicators");
       return;
      }
 
 //--- Get current signal
    ENUM_SIGNAL_TYPE signal = g_signal_manager.GetSignal();
+   Print("Current signal: ", signal == SIGNAL_BUY ? "BUY" : signal == SIGNAL_SELL ? "SELL" : "NONE",
+         " | RSI: ", DoubleToString(g_indicator_manager.GetRSI(), 2),
+         " | EMA: ", DoubleToString(g_indicator_manager.GetEMA(), _Digits),
+         " | ATR: ", DoubleToString(g_indicator_manager.GetATR(), _Digits),
+         " | MACD Main: ", DoubleToString(g_indicator_manager.GetMACDMain(), _Digits),
+         " | MACD Signal: ", DoubleToString(g_indicator_manager.GetMACDSignal(), _Digits),
+         " | Stoch Main: ", DoubleToString(g_indicator_manager.GetStochMain(), 2),
+         " | Stoch Signal: ", DoubleToString(g_indicator_manager.GetStochSignal(), 2),
+         " | SMA Fast: ", DoubleToString(g_indicator_manager.GetSMAFast(), _Digits),
+         " | SMA Slow: ", DoubleToString(g_indicator_manager.GetSMASlow(), _Digits),
+         " | BB Upper: ", DoubleToString(g_indicator_manager.GetBBUpper(), _Digits),
+         " | BB Lower: ", DoubleToString(g_indicator_manager.GetBBLower(), _Digits),
+         " | ADX: ", DoubleToString(g_indicator_manager.GetADX(), 2),
+         " | Momentum: ", DoubleToString(g_indicator_manager.GetMomentum(), 2),
+         " | Close: ", DoubleToString(iClose(_Symbol, _Period, 0), _Digits));
+
+//--- Update Martingale lot size based on last trade result
+   if(UseMartingale)
+     {
+      // Select history for the last 24 hours
+      datetime from_time = TimeCurrent() - 86400;
+      datetime to_time = TimeCurrent();
+      if(HistorySelect(from_time, to_time))
+        {
+         int total_deals = HistoryDealsTotal();
+         if(total_deals > 0)
+           {
+            ulong last_deal_ticket = HistoryDealGetTicket(total_deals - 1);
+            if(HistoryDealSelect(last_deal_ticket))
+              {
+               double last_profit = HistoryDealGetDouble(last_deal_ticket, DEAL_PROFIT);
+               if(last_profit < 0)
+                 {
+                  g_consecutive_losses++;
+                  if(g_consecutive_losses <= MaxMartingaleLevels)
+                     g_current_lot *= MartingaleMultiplier;
+                  else
+                     g_consecutive_losses = 0; // Reset after max levels
+                 }
+               else if(last_profit > 0)
+                 {
+                  g_consecutive_losses = 0;
+                  g_current_lot = LotSize;
+                 }
+              }
+           }
+        }
+      // Normalize and set lot
+      g_current_lot = g_trade_manager.NormalizeLots(g_current_lot);
+      g_trade_manager.SetLot(g_current_lot);
+      Print("Martingale: Consecutive Losses: ", g_consecutive_losses, " | Current Lot: ", g_current_lot);
+     }
+
+   //--- Simple AI-based update: adjust SignalManager RSI thresholds based on last trade profit when enabled
+   if(UseAISignals)
+     {
+      double ai_last_profit = 0.0;
+      datetime ai_from = TimeCurrent() - 86400;
+      if(HistorySelect(ai_from, TimeCurrent()))
+        {
+         int ai_total_deals = HistoryDealsTotal();
+         if(ai_total_deals > 0)
+           {
+            ulong ai_last_ticket = HistoryDealGetTicket(ai_total_deals - 1);
+            if(HistoryDealSelect(ai_last_ticket))
+              {
+               ai_last_profit = HistoryDealGetDouble(ai_last_ticket, DEAL_PROFIT);
+              }
+           }
+        }
+
+      // If last trade profit magnitude exceeds threshold, apply a small adjustment to RSI thresholds.
+      if(fabs(ai_last_profit) >= AIAdjustThreshold)
+        {
+         int new_oversold = RSIOversold;
+         int new_overbought = RSIOverbought;
+
+         if(ai_last_profit > 0)
+           {
+            // Positive recent trade -> relax entry (wider opportunity)
+            new_oversold = (int)MathMax(1, RSIOversold - (int)AIAdjustAmount);
+            new_overbought = (int)MathMin(99, RSIOverbought + (int)AIAdjustAmount);
+           }
+         else
+           {
+            // Negative recent trade -> tighten entries (be more selective)
+            new_oversold = (int)MathMin(50, RSIOversold + (int)AIAdjustAmount);
+            new_overbought = (int)MathMax(50, RSIOverbought - (int)AIAdjustAmount);
+           }
+
+         // Apply new thresholds to SignalManager using existing setters
+         g_signal_manager.SetRSIOversold(new_oversold);
+         g_signal_manager.SetRSIOverbought(new_overbought);
+
+         Print("AI: Adjusted RSI thresholds based on last deal profit ", DoubleToString(ai_last_profit, 2),
+               " -> RSIOversold: ", new_oversold, " RSIOverbought: ", new_overbought);
+        }
+     }
 
 //--- Process advanced position management
    if(g_position_manager.IsEnabled())
@@ -506,7 +668,7 @@ void OnTick()
       double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
 
       // Check margin before opening
-      if(g_risk_manager.CheckMargin(LotSize, ORDER_TYPE_BUY))
+      if(g_risk_manager.CheckMargin(g_current_lot, ORDER_TYPE_BUY))
         {
          Print("BUY Signal detected - RSI: ", DoubleToString(g_indicator_manager.GetRSI(), 2),
                " | EMA: ", DoubleToString(g_indicator_manager.GetEMA(), _Digits));
@@ -535,7 +697,7 @@ void OnTick()
       double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
 
       // Check margin before opening
-      if(g_risk_manager.CheckMargin(LotSize, ORDER_TYPE_SELL))
+      if(g_risk_manager.CheckMargin(g_current_lot, ORDER_TYPE_SELL))
         {
          Print("SELL Signal detected - RSI: ", DoubleToString(g_indicator_manager.GetRSI(), 2),
                " | EMA: ", DoubleToString(g_indicator_manager.GetEMA(), _Digits));

@@ -363,15 +363,20 @@ string CDisplayManager::GetSignalStatus()
 
    string signal_status = "";
 
-   // Get RSI value (assuming SignalManager has a method to get RSI)
-   // This would need to be implemented in SignalManager
-   signal_status += "RSI: --\n";  // Placeholder - would call m_signal_manager.GetRSI()
+   // Get RSI value
+   double rsi = m_signal_manager.GetRSI();
+   signal_status += "RSI: " + DoubleToString(rsi, 2) + "\n";
 
    // Get EMA value
-   signal_status += "EMA: --\n";  // Placeholder - would call m_signal_manager.GetEMA()
+   double ema = m_signal_manager.GetEMA();
+   signal_status += "EMA: " + DoubleToString(ema, _Digits) + "\n";
 
    // Get current signal
-   signal_status += "Signal: --";  // Placeholder - would call m_signal_manager.GetSignal()
+   ENUM_SIGNAL_TYPE signal = m_signal_manager.GetSignal();
+   string signal_str = "NONE";
+   if(signal == SIGNAL_BUY) signal_str = "BUY";
+   else if(signal == SIGNAL_SELL) signal_str = "SELL";
+   signal_status += "Signal: " + signal_str;
 
    return signal_status;
   }
